@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PSMF Companion</title>
+<style>
+  :root {
+    --accent: #2563eb;
+    --bg: #f9fafb;
+    --card-bg: #ffffff;
+    --border: #e5e7eb;
+    --text: #1f2937;
+    --muted: #9ca3af;
+    --ice: #eff6ff;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* ---- Tab bar ---- */
+  .tabbar {
+    position: sticky;
+    top: env(safe-area-inset-top, 0px);
+    z-index: 20;
+    display: flex;
+    background: var(--card-bg);
+    border-bottom: 1px solid var(--border);
+  }
+  .tabbtn {
+    flex: 1;
+    padding: 13px 4px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+  }
+  .tabbtn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tabpanel { display: none; padding: 16px; padding-bottom: 60px; }
+  .tabpanel.active { display: block; }
+
+  h1.page-title { font-size: 20px; margin: 4px 0 14px 0; }
+  .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 18px; }
+
+  h2.section-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin: 22px 0 10px 0;
+  }
+
+  /* ---- Shared table styling (meal plan + freezer + macros) ---- */
+  table.plan-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--card-bg);
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    font-size: 13px;
+  }
+  table.plan-table th, table.plan-table td {
+    text-align: left;
+    padding: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  table.plan-table th {
+    background: #f3f4f6;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--muted);
+  }
+  table.plan-table tr:last-child td { border-bottom: none; }
+  .day-col { font-weight: 600; white-space: nowrap; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .avg-row td { font-weight: 700; background: #f9fafb; }
+  .meal-cell {
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-decoration-color: var(--muted);
+  }
+  .meal-cell:active { color: var(--accent); }
+
+  /* ---- Recipe bottom sheet (shared by meal plan tab) ---- */
+  .overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(17,24,39,0.45);
+    z-index: 50;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .overlay.open { display: flex; }
+  .sheet {
+    background: var(--card-bg);
+    width: 100%;
+    max-width: 480px;
+    max-height: 82vh;
+    overflow-y: auto;
+    border-radius: 16px 16px 0 0;
+    padding: 18px 20px 26px 20px;
+    box-sizing: border-box;
+    position: relative;
+  }
+  .sheet-handle { width: 40px; height: 4px; background: var(--border); border-radius: 999px; margin: 0 auto 14px auto; }
+  .sheet-title { font-size: 18px; font-weight: 700; margin: 0 0 2px 0; }
+  .sheet-days {
+    display: inline-block; font-size: 11px; color: var(--accent); background: var(--ice);
+    padding: 2px 9px; border-radius: 999px; margin-bottom: 12px;
+  }
+  .sheet h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); margin: 16px 0 6px 0; }
+  .sheet ul, .sheet ol { margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.6; }
+  .sheet li { margin-bottom: 4px; }
+  .macro-row { display: flex; gap: 8px; margin-top: 6px; }
+  .macro-pill { flex: 1; background: #f3f4f6; border-radius: 8px; padding: 8px 4px; text-align: center; }
+  .macro-pill .val { font-size: 15px; font-weight: 700; }
+  .macro-pill .lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; }
+  .close-btn {
+    position: absolute; top: 14px; right: 16px; background: #f3f4f6; border: none; border-radius: 50%;
+    width: 28px; height: 28px; font-size: 16px; color: var(--muted); cursor: pointer;
+  }
+
+  /* ---- Freezer tab ---- */
+  .day-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 20px; }
+  .day-btn {
+    background: var(--card-bg); border: 1.5px solid var(--border); border-radius: 10px;
+    padding: 10px 2px; text-align: center; font-size: 12px; font-weight: 600; cursor: pointer;
+  }
+  .day-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+  .freezer-result { background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; padding: 18px; }
+  .freezer-result h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin: 0 0 8px 0; }
+  .today-meals { font-size: 15px; margin-bottom: 18px; padding-bottom: 16px; border-bottom: 1px dashed var(--border); }
+  .thaw-box { background: var(--ice); border-radius: 10px; padding: 14px; }
+  .thaw-box .tomorrow-label { font-size: 12px; color: var(--accent); font-weight: 700; margin-bottom: 8px; }
+  .thaw-item { display: flex; align-items: center; font-size: 15px; padding: 6px 0; }
+  .thaw-item::before { content: "🧊➜🧊"; margin-right: 10px; font-size: 13px; }
+  .empty-note { font-size: 14px; color: var(--muted); font-style: italic; }
+
+  /* ---- Grocery tab ---- */
+  .progress-wrap { padding: 4px 0 14px 0; }
+  .progress-bar { height: 8px; background: var(--border); border-radius: 999px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.25s ease; }
+  .progress-label { font-size: 12px; color: var(--muted); margin-top: 6px; display: flex; align-items: center; justify-content: space-between; }
+  .save-status { font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 999px; }
+  .save-status.saved { background: #dcfce7; color: #15803d; }
+  .save-status.failed { background: #fee2e2; color: #b91c1c; }
+  .grocery-section { margin-bottom: 22px; }
+  .grocery-section-title { font-size: 14px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
+  .grocery-section-note { font-size: 12px; color: var(--muted); margin: -4px 0 8px 0; font-style: italic; }
+  ul.grocery-list { list-style: none; margin: 0; padding: 0; background: var(--card-bg); border-radius: 12px; overflow: hidden; border: 1px solid var(--border); }
+  ul.grocery-list li { display: flex; align-items: center; padding: 13px 14px; border-bottom: 1px solid var(--border); cursor: pointer; user-select: none; transition: background 0.15s ease; }
+  ul.grocery-list li:last-child { border-bottom: none; }
+  ul.grocery-list li:active { background: #f3f4f6; }
+  .box {
+    flex-shrink: 0; width: 24px; height: 24px; border-radius: 7px; border: 2px solid #d1d5db; margin-right: 12px;
+    display: flex; align-items: center; justify-content: center; transition: all 0.15s ease;
+  }
+  ul.grocery-list li.checked .box { background: var(--accent); border-color: var(--accent); }
+  .box svg { width: 14px; height: 14px; opacity: 0; transition: opacity 0.1s ease; }
+  ul.grocery-list li.checked .box svg { opacity: 1; }
+  .item-text { font-size: 15px; line-height: 1.35; }
+  ul.grocery-list li.checked .item-text { color: var(--muted); text-decoration: line-through; }
+  .reset-btn {
+    display: block; width: 100%; margin-top: 16px; background: none; border: none; color: var(--muted);
+    font-size: 13px; padding: 10px; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<div class="tabbar">
+  <button class="tabbtn active" data-tab="mealplan">🍽️ Meal Plan</button>
+  <button class="tabbtn" data-tab="freezer">🧊 Freezer</button>
+  <button class="tabbtn" data-tab="grocery">🛒 Grocery</button>
+</div>
+
+<!-- ================= MEAL PLAN TAB ================= -->
+<div class="tabpanel active" id="tab-mealplan">
+  <h1 class="page-title">PSMF Meal Plan</h1>
+
+  <h2 class="section-title">Weekly Schedule</h2>
+  <table class="plan-table" id="scheduleTable">
+    <thead><tr><th>Day</th><th>Meal 1</th><th>Meal 2</th><th>Shake</th></tr></thead>
+    <tbody id="scheduleBody"></tbody>
+  </table>
+
+  <h2 class="section-title">Daily Macros</h2>
+  <table class="plan-table">
+    <thead><tr><th>Day</th><th class="num">Calories</th><th class="num">Protein</th><th class="num">Carbs</th><th class="num">Fat</th></tr></thead>
+    <tbody id="macrosBody"></tbody>
+  </table>
+</div>
+
+<!-- Recipe popout (shared across all meal-plan taps) -->
+<div class="overlay" id="overlay">
+  <div class="sheet">
+    <button class="close-btn" id="closeBtn">✕</button>
+    <div class="sheet-handle"></div>
+    <div id="sheetContent"></div>
+  </div>
+</div>
+
+<!-- ================= FREEZER TAB ================= -->
+<div class="tabpanel" id="tab-freezer">
+  <h1 class="page-title">🧊 Freezer Rotation Helper</h1>
+  <div class="subtitle">Tap today's day to see what to move to the fridge tonight</div>
+  <div class="day-grid" id="dayGrid"></div>
+  <div class="freezer-result" id="freezerResult"></div>
+</div>
+
+<!-- ================= GROCERY TAB ================= -->
+<div class="tabpanel" id="tab-grocery">
+  <h1 class="page-title">🛒 PSMF Grocery Checklist</h1>
+  <div class="subtitle">Tap an item to check it off — your progress is saved automatically.</div>
+  <div class="progress-wrap">
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="progress-label">
+      <span id="progressLabel">0 of 0 checked</span>
+      <span class="save-status saved" id="saveStatus">✓ Saved</span>
+    </div>
+  </div>
+  <div id="groceryList"></div>
+  <button class="reset-btn" id="resetBtn">Reset all checkboxes</button>
+</div>
+
+<script>
+/* ============================================================
+   TAB SWITCHING
+   ============================================================ */
+document.querySelectorAll(".tabbtn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tabbtn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".tabpanel").forEach(p => p.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
+  });
+});
+</script>
+
+<script>
+/* ============================================================
+   MEAL PLAN TAB
+   ============================================================ */
+(function () {
+  const meals = [
+    {
+      id: "m2",
+      days: "Mon · Thu · Sat",
+      name: "Creamy pickled beef bowl (350g beef)",
+      ingredients: [
+        "300g cucumber, sliced",
+        "30g red onion, sliced",
+        "15g jalapeño, sliced",
+        "30g rice vinegar",
+        "15g white vinegar",
+        "15g lime juice (~1/2 lime)",
+        "5g pickle juice",
+        "350g extra lean ground beef (96/4)",
+        "10g soy sauce",
+        "45g nonfat Greek yogurt",
+        "5g yellow mustard",
+        "15g sugar-free BBQ sauce (Walden Farms)",
+        "Salt, pepper, garlic powder, smoked paprika"
+      ],
+      steps: [
+        "In a large container, combine the sliced cucumber, red onion, and jalapeño with the rice vinegar, white vinegar, lime juice, salt, and pickle juice. Mix well and let sit 15–30 minutes to quick-pickle.",
+        "In a pan over medium-high heat, cook the ground beef with the seasonings until browned, then stir in the soy sauce to coat. Let it cool slightly.",
+        "Once the cucumbers have softened, mix the Greek yogurt, mustard, and BBQ sauce into the container until the vegetables are coated.",
+        "Top with the cooked beef or mix it through. Taste and adjust the salt or acid before serving."
+      ],
+      macros: { cal: 521, p: 85, c: 17, f: 16 }
+    },
+    {
+      id: "m3",
+      days: "Tue · Sat",
+      name: "High-protein alfredo with air-fried shrimp",
+      ingredients: [
+        "250g low-fat cottage cheese",
+        "1 packet konjac noodles, rinsed thoroughly",
+        "1 clove garlic, minced",
+        "Onion powder, salt, dried chives",
+        "250g shrimp, peeled and deveined"
+      ],
+      steps: [
+        "Toss the shrimp with a light spray of oil and a pinch of salt/pepper. Air fry at 400°F (200°C) for 6–8 minutes, shaking the basket halfway, until opaque and firm.",
+        "Blend the cottage cheese, garlic, spices, and a splash of water until completely smooth — this is your alfredo sauce.",
+        "Dry-fry the rinsed konjac noodles in a hot pan for a few minutes to cook off excess moisture and the faint fishy smell before saucing.",
+        "Toss the noodles with the sauce over very low heat just to warm through. Don't let it boil, or the sauce can split.",
+        "Top with the air-fried shrimp."
+      ],
+      macros: { cal: 440, p: 90, c: 15, f: 6 }
+    },
+    {
+      id: "mapo",
+      days: "Sun · Tue · Thu",
+      name: "Mapo tofu (turkey, PSMF-adjusted)",
+      ingredients: [
+        "300g soft or medium-firm tofu",
+        "300g extra lean ground turkey",
+        "4 cloves garlic, finely minced",
+        "1 red chilli, deseeded and finely diced",
+        "1 tbsp ginger, finely minced",
+        "4 spring onions, whites and greens separated, finely sliced",
+        "1 tbsp doubanjiang",
+        "1 tbsp miso (red or white)",
+        "1 tbsp reduced-sodium soy sauce",
+        "1 tbsp sake or mirin",
+        "250mL chicken bone broth",
+        "A few drops sesame oil, optional",
+        "White pepper, salt to taste",
+        "Slurry: 1/2 tsp xanthan gum whisked into 2 tbsp cold water",
+        "Side: 200g Brussels sprouts, halved",
+        "Side sauce: 1 clove garlic (minced), 1 tsp ginger (minced), 1 tbsp reduced-sodium soy sauce, 1 tsp rice vinegar, pinch chilli flakes"
+      ],
+      steps: [
+        "Finely mince the garlic, chilli, ginger, and spring onion whites. Soak the sliced spring onion greens in ice water for 10 minutes for crunch, then strain and pat dry.",
+        "Simmer the sliced tofu in salted water for 3–4 minutes to firm it up, then transfer to a lightly oiled tray.",
+        "Toss the halved Brussels sprouts with a light spray of oil, salt, and pepper. Air fry at 400°F (200°C) for 12–15 minutes, shaking halfway, until the cut edges are charred and crispy.",
+        "While the sprouts cook, mix the side sauce ingredients (garlic, ginger, soy sauce, vinegar, chilli flakes) in a small bowl. Toss the hot sprouts in this sauce as soon as they come out of the air fryer.",
+        "Heat a non-stick pan over medium-high with just a splash of water or stock — no added oil. Brown the ground turkey, breaking it up with two forks.",
+        "Add the sesame oil (if using), chilli, ginger, garlic, and spring onion whites. Sauté 1–2 minutes.",
+        "Add the doubanjiang, miso, reduced-sodium soy sauce, and sake/mirin. Sauté 1–2 minutes until fragrant.",
+        "Add the chicken bone broth, simmer on medium-low for 10 minutes.",
+        "Whisk the xanthan gum into the cold water; stir in half while stirring the broth continuously, simmer 30–60 seconds, then add more gradually until it coats a spoon nicely.",
+        "Gently add the tofu, swirling the pan (don't stir) to avoid breaking the curds. Add white pepper, simmer 2 more minutes.",
+        "Serve topped with the crisped spring onion greens, Brussels sprouts on the side."
+      ],
+      macros: { cal: 795, p: 110, c: 42, f: 22 }
+    },
+    {
+      id: "m6",
+      days: "Mon · Wed · Fri",
+      name: "Zucchini noodle bolognese",
+      ingredients: [
+        "2 large zucchinis (~600–650g), spiralized",
+        "300g extra lean ground turkey",
+        "200g tomato purée",
+        "Italian herbs, garlic powder, a pinch of sweetener"
+      ],
+      steps: [
+        "Brown the extra lean ground turkey in a non-stick pan, breaking it up finely.",
+        "Stir in the tomato purée and herbs; simmer until thickened.",
+        "Add the zucchini noodles and toss for just 2 minutes — overcooking releases water and thins out the sauce."
+      ],
+      macros: { cal: 622, p: 105, c: 32, f: 11 }
+    },
+    {
+      id: "m7",
+      days: "Sun",
+      name: "Tuna pancakes",
+      ingredients: [
+        "266g canned tuna in brine, well drained",
+        "144g liquid egg whites",
+        "1/2 onion, finely diced",
+        "Dill and lemon zest"
+      ],
+      steps: [
+        "Mix all the ingredients together in a bowl.",
+        "Heat a non-stick pan and spoon the mixture into small patties.",
+        "Cook about 3 minutes per side until golden brown. Serve with mustard."
+      ],
+      macros: { cal: 349, p: 71, c: 11, f: 1 }
+    },
+    {
+      id: "m9",
+      days: "Wed",
+      name: "Chicken breast pizza bowl",
+      ingredients: [
+        "300g chicken breast, diced",
+        "100g mushrooms",
+        "100g tomato purée",
+        "Oregano, basil, chilli flakes",
+        "Optional: non-fat grated cheese or nutritional yeast"
+      ],
+      steps: [
+        "Cook the chicken and mushrooms together in a pan.",
+        "Pour the tomato purée over top and reduce the heat.",
+        "Sprinkle on the herbs (and optional cheese), then cover with a lid for 2 minutes to steam through."
+      ],
+      macros: { cal: 367, p: 73, c: 5, f: 5 }
+    },
+    {
+      id: "m10",
+      days: "Fri",
+      name: "Shirataki chicken lo mein",
+      ingredients: [
+        "300g chicken breast, sliced thin",
+        "1 packet (200g) shirataki/konjac noodles",
+        "200g bok choy",
+        "1/2 bell pepper",
+        "Sauce: 45mL reduced-sodium soy sauce, 15mL rice vinegar, 5g garlic, 5g ginger, 4g erythritol/stevia, 2g chilli flakes"
+      ],
+      steps: [
+        "Rinse the noodles thoroughly under cold water for about a minute.",
+        "Dry-fry them in a hot, oil-free pan for 5–7 minutes until they squeak and the moisture has cooked off — this step is what fixes the texture.",
+        "In the same pan, brown the chicken slices.",
+        "Add the vegetables with a splash of water to steam slightly.",
+        "Toss the noodles back in, pour over the sauce, and stir-fry for about 2 minutes until everything is coated."
+      ],
+      macros: { cal: 443, p: 79, c: 19, f: 7 }
+    },
+    {
+      id: "shake",
+      days: "Daily",
+      name: "Vanilla-cinnamon casein shake (2 scoops, fixed)",
+      ingredients: [
+        "2 scoops (~60g) casein protein powder",
+        "~250mL cold water",
+        "4–5 ice cubes",
+        "1/2 tsp vanilla extract",
+        "Cinnamon, to taste",
+        "Pinch of xanthan gum, optional (for a thicker texture)"
+      ],
+      steps: [
+        "Add all ingredients to a blender.",
+        "Blend for 20–30 seconds until smooth and thick, like a milkshake — this is what fixes casein's usual gritty texture, not just shaking it in a bottle.",
+        "Drink right away."
+      ],
+      macros: { cal: 240, p: 48, c: 6, f: 2 }
+    }
+  ];
+
+  const mealsById = {};
+  meals.forEach(m => mealsById[m.id] = m);
+
+  // day -> [meal1 id, meal2 id]; shake is implicit every day
+  const schedule = [
+    { day: "Sun", ids: ["mapo", "m7"] },
+    { day: "Mon", ids: ["m2", "m6"] },
+    { day: "Tue", ids: ["mapo", "m3"] },
+    { day: "Wed", ids: ["m6", "m9"] },
+    { day: "Thu", ids: ["m2", "mapo"] },
+    { day: "Fri", ids: ["m6", "m10"] },
+    { day: "Sat", ids: ["m2", "m3"] }
+  ];
+
+  function renderSchedule() {
+    const body = document.getElementById("scheduleBody");
+    body.innerHTML = "";
+    schedule.forEach(row => {
+      const tr = document.createElement("tr");
+      const m1 = mealsById[row.ids[0]];
+      const m2 = mealsById[row.ids[1]];
+      const shake = mealsById["shake"];
+      tr.innerHTML = `
+        <td class="day-col">${row.day}</td>
+        <td class="meal-cell" data-id="${m1.id}">${m1.name.split(" (")[0]} (${m1.macros.p}g)</td>
+        <td class="meal-cell" data-id="${m2.id}">${m2.name.split(" (")[0]} (${m2.macros.p}g)</td>
+        <td class="meal-cell" data-id="shake">${shake.macros.p}g</td>
+      `;
+      body.appendChild(tr);
+      tr.querySelectorAll(".meal-cell").forEach(cell => {
+        cell.addEventListener("click", () => openSheet(mealsById[cell.dataset.id]));
+      });
+    });
+  }
+
+  function renderMacros() {
+    const body = document.getElementById("macrosBody");
+    body.innerHTML = "";
+    let totals = { cal: 0, p: 0, c: 0, f: 0 };
+    schedule.forEach(row => {
+      const m1 = mealsById[row.ids[0]].macros;
+      const m2 = mealsById[row.ids[1]].macros;
+      const shake = mealsById["shake"].macros;
+      const day = {
+        cal: m1.cal + m2.cal + shake.cal,
+        p: m1.p + m2.p + shake.p,
+        c: m1.c + m2.c + shake.c,
+        f: m1.f + m2.f + shake.f
+      };
+      totals.cal += day.cal; totals.p += day.p; totals.c += day.c; totals.f += day.f;
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td class="day-col">${row.day}</td>
+        <td class="num">${day.cal.toLocaleString()}</td>
+        <td class="num">${day.p}g</td>
+        <td class="num">${day.c}g</td>
+        <td class="num">${day.f}g</td>
+      `;
+      body.appendChild(tr);
+    });
+    const avgRow = document.createElement("tr");
+    avgRow.className = "avg-row";
+    avgRow.innerHTML = `
+      <td class="day-col">Avg</td>
+      <td class="num">${Math.round(totals.cal / 7).toLocaleString()}</td>
+      <td class="num">${Math.round(totals.p / 7)}g</td>
+      <td class="num">${Math.round(totals.c / 7)}g</td>
+      <td class="num">${Math.round(totals.f / 7)}g</td>
+    `;
+    body.appendChild(avgRow);
+  }
+
+  function openSheet(m) {
+    const content = document.getElementById("sheetContent");
+    content.innerHTML = `
+      <div class="sheet-days">${m.days}</div>
+      <p class="sheet-title">${m.name}</p>
+      <h3>Ingredients</h3>
+      <ul>${m.ingredients.map(i => `<li>${i}</li>`).join("")}</ul>
+      <h3>Method</h3>
+      <ol>${m.steps.map(s => `<li>${s}</li>`).join("")}</ol>
+      <h3>Macros</h3>
+      <div class="macro-row">
+        <div class="macro-pill"><div class="val">${m.macros.cal}</div><div class="lbl">Cal</div></div>
+        <div class="macro-pill"><div class="val">${m.macros.p}g</div><div class="lbl">Protein</div></div>
+        <div class="macro-pill"><div class="val">${m.macros.c}g</div><div class="lbl">Carbs</div></div>
+        <div class="macro-pill"><div class="val">${m.macros.f}g</div><div class="lbl">Fat</div></div>
+      </div>
+    `;
+    document.getElementById("overlay").classList.add("open");
+  }
+  function closeSheet() { document.getElementById("overlay").classList.remove("open"); }
+  document.getElementById("closeBtn").addEventListener("click", closeSheet);
+  document.getElementById("overlay").addEventListener("click", (e) => { if (e.target.id === "overlay") closeSheet(); });
+
+  renderSchedule();
+  renderMacros();
+})();
+</script>
+
+<script>
+/* ============================================================
+   FREEZER TAB
+   ============================================================ */
+(function () {
+  const week = [
+    { day: "Sun", meals: "Mapo tofu + Tuna pancakes", thaw: ["Ground beef (350g)", "Ground turkey (300g)"] },
+    { day: "Mon", meals: "Beef bowl + Bolognese", thaw: ["Ground turkey (300g)", "Shrimp (250g)"] },
+    { day: "Tue", meals: "Mapo tofu + Alfredo + shrimp", thaw: ["Ground turkey (300g)", "Chicken breast (300g)"] },
+    { day: "Wed", meals: "Bolognese + Chicken pizza bowl", thaw: ["Ground beef (350g)", "Ground turkey (300g)"] },
+    { day: "Thu", meals: "Beef bowl + Mapo tofu", thaw: ["Ground turkey (300g)", "Chicken breast (300g)"] },
+    { day: "Fri", meals: "Bolognese + Chicken lo mein", thaw: ["Ground beef (350g)", "Shrimp (250g)"] },
+    { day: "Sat", meals: "Beef bowl + Alfredo + shrimp", thaw: ["Ground turkey (300g)"] }
+  ];
+
+  let selected = new Date().getDay();
+
+  function renderGrid() {
+    const grid = document.getElementById("dayGrid");
+    grid.innerHTML = "";
+    week.forEach((d, i) => {
+      const btn = document.createElement("div");
+      btn.className = "day-btn" + (i === selected ? " active" : "");
+      btn.textContent = d.day;
+      btn.addEventListener("click", () => { selected = i; renderGrid(); renderResult(); });
+      grid.appendChild(btn);
+    });
+  }
+
+  function renderResult() {
+    const today = week[selected];
+    const tomorrow = week[(selected + 1) % 7];
+    const box = document.getElementById("freezerResult");
+    let thawHtml;
+    if (today.thaw.length === 0) {
+      thawHtml = `<div class="empty-note">Nothing needs thawing — tomorrow's meal (${tomorrow.meals}) uses only pantry/fresh items.</div>`;
+    } else {
+      thawHtml = today.thaw.map(item => `<div class="thaw-item">${item}</div>`).join("");
+    }
+    box.innerHTML = `
+      <h3>Today — ${today.day}</h3>
+      <div class="today-meals">${today.meals}</div>
+      <div class="thaw-box">
+        <div class="tomorrow-label">Move to fridge tonight (for ${tomorrow.day})</div>
+        ${thawHtml}
+      </div>
+    `;
+  }
+
+  renderGrid();
+  renderResult();
+})();
+</script>
+
+<script>
+/* ============================================================
+   GROCERY TAB
+   ============================================================ */
+(function () {
+  const sections = [
+    {
+      title: "Proteins",
+      items: [
+        "Extra lean ground beef (96%+) — ~1.05kg (3 × 350g portions)",
+        "Chicken breast — ~600g total (2 medium breasts: 1 for pizza bowl + 1 for lo mein)",
+        "Extra lean ground turkey — ~1.8kg total (900g for bolognese, 3x + 900g for mapo tofu, 3x)",
+        "Shrimp — ~500g total (250g × 2 for Alfredo, now made twice a week), 2 bags frozen (300–340g each)",
+        "Canned tuna in brine — 266g needed (likely 2 cans, drained weight varies by brand)",
+        "Liquid egg whites — 1 carton (~144g needed)",
+        "Casein protein powder — 1 large tub (~420g/week needed for the daily 2-scoop shake alone; buy accordingly)"
+      ]
+    },
+    {
+      title: "Dairy",
+      items: [
+        "Low-fat cottage cheese — 1 tub (500 g)",
+        "Nonfat Greek yogurt — 1 small tub (extra left over)"
+      ]
+    },
+    {
+      title: "Produce",
+      items: [
+        "Cauliflower rice — 2 bags (500 g each)",
+        "Zucchini — 6 medium-large (bolognese is now 3x/week)",
+        "Cucumber — ~900g regular (3 x 300g for beef bowl)",
+        "Brussels sprouts — 600g total (200g x 3, mapo tofu side)",
+        "Red onion — 1",
+        "Bok choy — 2–3 heads",
+        "Bell pepper — 1 (only needed for the lo mein now)",
+        "Onion — 1",
+        "Garlic — 1 bulb",
+        "Fresh ginger — 1 knob",
+        "Spring onions — 1-2 bunches (mapo tofu is now 3x/week)",
+        "Red chilli — 3 (mapo tofu is now 3x/week)",
+        "Firm or medium-firm tofu — 900g total (mapo tofu is now 3x/week)",
+        "Lemon — 1 (just for the tuna pancakes' zest)",
+        "Limes — 2 (beef bowl is now 3x/week)"
+      ]
+    },
+    {
+      title: "Pantry / Sauces",
+      items: [
+        "Tomato purée — 2 small cans or 1 large jar (~700g needed, bolognese is now 3x/week)",
+        "Konjac noodles — 3 packets (2 for Alfredo, now made twice a week + 1 for lo mein)",
+        "Reduced-sodium soy sauce — 1 bottle",
+        "Rice vinegar — 1 bottle",
+        "White vinegar — 1 bottle",
+        "Small jar of dill pickles — for the pickle juice",
+        "Yellow mustard — 1 bottle",
+        "Sugar-free BBQ sauce (Walden Farms) — 1 bottle",
+        "Erythritol or stevia — 1 bag/bottle",
+        "Xanthan gum — 1 small bag (lasts many weeks)",
+        "Doubanjiang (fermented broad bean chilli paste) — 1 jar",
+        "Miso paste (red or white) — 1 tub",
+        "Sake or mirin — 1 small bottle",
+        "Chicken bone broth — 1 large carton or 2 small (750mL needed, mapo tofu is now 3x/week)"
+      ]
+    },
+    {
+      title: "Check the spice rack first",
+      items: [
+        "Garlic powder",
+        "Onion powder",
+        "Italian herbs",
+        "Oregano / basil",
+        "Chilli flakes",
+        "Dried dill",
+        "Dried chives",
+        "Black pepper / salt",
+        "Smoked paprika"
+      ]
+    },
+    {
+      title: "Supplements & Electrolytes",
+      items: [
+        "Lite salt (e.g. Morton Lite Salt)",
+        "Vitamin D3",
+        "Vitamin K2",
+        "Multivitamin (Men's One A Day)",
+        "Concentrated omega-3 fish oil (triple strength, ~750–900 mg combined EPA/DHA per softgel)",
+        "Calcium supplement (citrate, 500–600 mg elemental)",
+        "Magnesium glycinate (300–400 mg elemental)"
+      ]
+    }
+  ];
+
+  const STORAGE_KEY = "psmf-app-grocery-state";
+  let checkedState = {};
+
+  function itemId(sIdx, iIdx) { return sIdx + "-" + iIdx; }
+
+  function render() {
+    const list = document.getElementById("groceryList");
+    list.innerHTML = "";
+    sections.forEach((section, sIdx) => {
+      const wrap = document.createElement("div");
+      wrap.className = "grocery-section";
+      const title = document.createElement("div");
+      title.className = "grocery-section-title";
+      title.textContent = section.title;
+      wrap.appendChild(title);
+      if (section.note) {
+        const note = document.createElement("div");
+        note.className = "grocery-section-note";
+        note.textContent = section.note;
+        wrap.appendChild(note);
+      }
+      const ul = document.createElement("ul");
+      ul.className = "grocery-list";
+      section.items.forEach((text, iIdx) => {
+        const id = itemId(sIdx, iIdx);
+        const li = document.createElement("li");
+        if (checkedState[id]) li.classList.add("checked");
+        const box = document.createElement("div");
+        box.className = "box";
+        box.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+        const span = document.createElement("span");
+        span.className = "item-text";
+        span.textContent = text;
+        li.appendChild(box);
+        li.appendChild(span);
+        li.addEventListener("click", () => toggle(id));
+        ul.appendChild(li);
+      });
+      wrap.appendChild(ul);
+      list.appendChild(wrap);
+    });
+    updateProgress();
+  }
+
+  function updateProgress() {
+    const totalItems = sections.reduce((sum, s) => sum + s.items.length, 0);
+    const checkedCount = Object.values(checkedState).filter(Boolean).length;
+    const pct = totalItems ? Math.round((checkedCount / totalItems) * 100) : 0;
+    document.getElementById("progressFill").style.width = pct + "%";
+    document.getElementById("progressLabel").textContent = checkedCount + " of " + totalItems + " checked";
+  }
+
+  function setSaveStatus(ok) {
+    const el = document.getElementById("saveStatus");
+    el.className = "save-status " + (ok ? "saved" : "failed");
+    el.textContent = ok ? "✓ Saved" : "⚠ Not saved";
+  }
+
+  function saveState() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(checkedState));
+      setSaveStatus(true);
+    } catch (e) {
+      setSaveStatus(false);
+    }
+  }
+
+  function toggle(id) {
+    checkedState[id] = !checkedState[id];
+    render();
+    saveState();
+  }
+
+  function resetAll() {
+    checkedState = {};
+    render();
+    saveState();
+  }
+
+  function init() {
+    try {
+      const local = localStorage.getItem(STORAGE_KEY);
+      if (local) checkedState = JSON.parse(local);
+      setSaveStatus(true);
+    } catch (e) {
+      checkedState = {};
+      setSaveStatus(false);
+    }
+    render();
+  }
+
+  document.getElementById("resetBtn").addEventListener("click", resetAll);
+  init();
+})();
+</script>
+
+</body>
+</html>
