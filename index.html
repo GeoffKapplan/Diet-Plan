@@ -4,6 +4,24 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>PSMF Companion</title>
+
+<!-- Makes this behave like a standalone app when added to a home screen -->
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="PSMF Companion" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="theme-color" content="#f9fafb" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+<link rel="icon" href="icon-192.png" />
+<link rel="shortcut icon" href="favicon.ico" />
+
+<!-- Web app manifest + service worker: makes this installable as a real PWA -->
+<link rel="manifest" href="manifest.json" />
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js'));
+  }
+</script>
 <style>
   :root {
     --accent: #2563eb;
