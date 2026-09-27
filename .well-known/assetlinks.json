@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "io.github.geoffkapplan.twa",
+        "sha256_cert_fingerprints": ["6A:7C:4B:D7:13:47:7D:BA:90:74:72:C9:7D:FC:0E:9B:1E:E2:EB:64:BF:90:87:E7:79:C1:45:29:C6:30:6A:1A"]
+      }
+    }]
