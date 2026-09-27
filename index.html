@@ -4,24 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>PSMF Companion</title>
-
-<!-- Makes this behave like a standalone app when added to a home screen -->
-<meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="default" />
-<meta name="apple-mobile-web-app-title" content="PSMF Companion" />
-<meta name="mobile-web-app-capable" content="yes" />
-<meta name="theme-color" content="#f9fafb" />
-<link rel="apple-touch-icon" href="icon-192.png" />
-<link rel="icon" href="icon-192.png" />
-<link rel="shortcut icon" href="favicon.ico" />
-
-<!-- Web app manifest + service worker: makes this installable as a real PWA -->
-<link rel="manifest" href="manifest.json" />
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js'));
-  }
-</script>
 <style>
   :root {
     --accent: #2563eb;
@@ -460,12 +442,12 @@ document.querySelectorAll(".tabbtn").forEach(btn => {
   // day -> [meal1 id, meal2 id]; shake is implicit every day
   const schedule = [
     { day: "Sun", ids: ["mapo", "m7"] },
-    { day: "Mon", ids: ["m2", "m6"] },
-    { day: "Tue", ids: ["mapo", "m3"] },
-    { day: "Wed", ids: ["m6", "m9"] },
-    { day: "Thu", ids: ["m2", "mapo"] },
-    { day: "Fri", ids: ["m6", "m10"] },
-    { day: "Sat", ids: ["m2", "m3"] }
+    { day: "Mon", ids: ["m3", "m6"] },
+    { day: "Tue", ids: ["m9", "m2"] },
+    { day: "Wed", ids: ["m10", "mapo"] },
+    { day: "Thu", ids: ["m6", "m2"] },
+    { day: "Fri", ids: ["mapo", "m3"] },
+    { day: "Sat", ids: ["m6", "m2"] }
   ];
 
   function renderSchedule() {
@@ -560,13 +542,13 @@ document.querySelectorAll(".tabbtn").forEach(btn => {
    ============================================================ */
 (function () {
   const week = [
-    { day: "Sun", meals: "Mapo tofu + Tuna pancakes", thaw: ["Ground beef (350g)", "Ground turkey (300g)"] },
-    { day: "Mon", meals: "Beef bowl + Bolognese", thaw: ["Ground turkey (300g)", "Shrimp (250g)"] },
-    { day: "Tue", meals: "Mapo tofu + Alfredo + shrimp", thaw: ["Ground turkey (300g)", "Chicken breast (300g)"] },
-    { day: "Wed", meals: "Bolognese + Chicken pizza bowl", thaw: ["Ground beef (350g)", "Ground turkey (300g)"] },
-    { day: "Thu", meals: "Beef bowl + Mapo tofu", thaw: ["Ground turkey (300g)", "Chicken breast (300g)"] },
-    { day: "Fri", meals: "Bolognese + Chicken lo mein", thaw: ["Ground beef (350g)", "Shrimp (250g)"] },
-    { day: "Sat", meals: "Beef bowl + Alfredo + shrimp", thaw: ["Ground turkey (300g)"] }
+    { day: "Sun", meals: "Mapo tofu + Tuna pancakes", thaw: ["Shrimp (250g)", "Ground turkey (300g)"] },
+    { day: "Mon", meals: "Alfredo + shrimp + Bolognese", thaw: ["Chicken breast (300g)", "Ground beef (350g)"] },
+    { day: "Tue", meals: "Chicken pizza bowl + Beef bowl", thaw: ["Chicken breast (300g)", "Ground turkey (300g)"] },
+    { day: "Wed", meals: "Chicken lo mein + Mapo tofu", thaw: ["Ground turkey (300g)", "Ground beef (350g)"] },
+    { day: "Thu", meals: "Bolognese + Beef bowl", thaw: ["Ground turkey (300g)", "Shrimp (250g)"] },
+    { day: "Fri", meals: "Mapo tofu + Alfredo + shrimp", thaw: ["Ground turkey (300g)", "Ground beef (350g)"] },
+    { day: "Sat", meals: "Bolognese + Beef bowl", thaw: ["Ground turkey (300g)"] }
   ];
 
   let selected = new Date().getDay();
