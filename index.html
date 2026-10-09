@@ -689,9 +689,55 @@ document.querySelectorAll(".tabbtn").forEach(btn => {
 
   function itemId(sIdx, iIdx) { return sIdx + "-" + iIdx; }
 
+  function buildListItem(id, text, categoryLabel) {
+    const li = document.createElement("li");
+    if (checkedState[id]) li.classList.add("checked");
+    const box = document.createElement("div");
+    box.className = "box";
+    box.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+    const span = document.createElement("span");
+    span.className = "item-text";
+    span.textContent = categoryLabel ? `${text} — ${categoryLabel}` : text;
+    li.appendChild(box);
+    li.appendChild(span);
+    li.addEventListener("click", () => toggle(id));
+    return li;
+  }
+
   function render() {
     const list = document.getElementById("groceryList");
     list.innerHTML = "";
+
+    // --- Need to Buy: live aggregate of every unchecked item ---
+    const needToBuyWrap = document.createElement("div");
+    needToBuyWrap.className = "grocery-section";
+    const needTitle = document.createElement("div");
+    needTitle.className = "grocery-section-title";
+    needTitle.textContent = "🛒 Need to Buy";
+    needToBuyWrap.appendChild(needTitle);
+    const needUl = document.createElement("ul");
+    needUl.className = "grocery-list";
+    let unchecked = [];
+    sections.forEach((section, sIdx) => {
+      section.items.forEach((text, iIdx) => {
+        const id = itemId(sIdx, iIdx);
+        if (!checkedState[id]) unchecked.push({ id, text, category: section.title });
+      });
+    });
+    if (unchecked.length === 0) {
+      const note = document.createElement("div");
+      note.className = "grocery-section-note";
+      note.textContent = "Everything's checked off.";
+      needToBuyWrap.appendChild(note);
+    } else {
+      unchecked.forEach(item => {
+        needUl.appendChild(buildListItem(item.id, item.text, item.category));
+      });
+      needToBuyWrap.appendChild(needUl);
+    }
+    list.appendChild(needToBuyWrap);
+
+    // --- Full categorized lists (reference/checked history) ---
     sections.forEach((section, sIdx) => {
       const wrap = document.createElement("div");
       wrap.className = "grocery-section";
@@ -709,18 +755,7 @@ document.querySelectorAll(".tabbtn").forEach(btn => {
       ul.className = "grocery-list";
       section.items.forEach((text, iIdx) => {
         const id = itemId(sIdx, iIdx);
-        const li = document.createElement("li");
-        if (checkedState[id]) li.classList.add("checked");
-        const box = document.createElement("div");
-        box.className = "box";
-        box.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
-        const span = document.createElement("span");
-        span.className = "item-text";
-        span.textContent = text;
-        li.appendChild(box);
-        li.appendChild(span);
-        li.addEventListener("click", () => toggle(id));
-        ul.appendChild(li);
+        ul.appendChild(buildListItem(id, text));
       });
       wrap.appendChild(ul);
       list.appendChild(wrap);
